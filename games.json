@@ -1000,18 +1000,6 @@
     "authorLink": ""
   },
   {
-    "id": 113,
-    "name": "Ruffle",
-    "cover": "{COVER_URL}/113.png",
-    "url": "{HTML_URL}/113.html",
-    "author": "",
-    "authorLink": "",
-    "special": [
-      "emulator",
-      "flash"
-    ]
-  },
-  {
     "id": 114,
     "name": "2048",
     "cover": "{COVER_URL}/114.png",
