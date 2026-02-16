@@ -1,9 +1,15 @@
 [
   {
-    "id": -1,
+    "id": -2,
   "name": "[!] SUGGEST GAMES • Tiktok",
   "cover": "https://raw.githubusercontent.com/NikeGtag/covers/main/tiktok.png",
   "url": "https://www.tiktok.com/@gnmath"
+  },
+  {
+  "id": -1,
+  "name": "Upvote On UBGHUB!",
+  "cover": "https://cdn.jsdelivr.net/gh/NoseyGames/data@main/Screenshot%202026-01-30%20223830.png",
+  "url": "https://ubghub.org/?site=NikeHub"
   },
   {
     "id": 0,
