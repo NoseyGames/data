@@ -5,8 +5,8 @@
   <title>Italian Brainrot Obby Parkour</title>
   <style>
     html, body { background: #000; width: 100%; height: 100%; overflow: hidden; padding: 0; margin: 0; }
-    #gameContainer { position: absolute; }
-    #gameContainer canvas { position: absolute; }
+    #gameContainer { position: absolute; width: 100%; height: 100%; }
+    #gameContainer canvas { width: 100%; height: 100%; }
   </style>
 </head>
 <body>
@@ -22,17 +22,11 @@
   </div>
 
   <script>
-    function firebaseLogEvent(event_name) { console.log('firebaseLogEvent:', event_name); }
-    function firebaseLogEventParameter(event_name, event_param) { console.log('firebaseLogEventParameter:', event_name, event_param); }
-    function firebaseSetUserProperties(props) { console.log('firebaseSetUserProperties:', props); }
-  </script>
-
-  <script>
     window.fileMergerConfig = {
       files: [
         { name: 'TPG_ItalianBrainrotObbyParkour_V01i.data.unityweb', parts: 2 },
       ],
-      basePath: 'Build/',
+      basePath: 'Build/', 
       debug: true
     };
   </script>
@@ -40,8 +34,7 @@
   <script>
     (function () {
       "use strict";
-      const defaultConfig = { files: [], basePath: "", debug: true };
-      const config = Object.assign({}, defaultConfig, window.fileMergerConfig || {});
+      const config = Object.assign({ files: [], basePath: "", debug: true }, window.fileMergerConfig || {});
       window.mergedFiles = window.mergedFiles || {};
       const mergeStatus = {};
       const mergeProgress = {};
@@ -50,7 +43,22 @@
       function initializeUI() {
         loadingDiv = document.createElement("div");
         loadingDiv.id = "file-merger-loading";
-        loadingDiv.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.9); color: white; padding: 30px 40px; border-radius: 10px; font-family: monospace; font-size: 16px; z-index: 10000; min-width: 300px; text-align: center;`;
+        loadingDiv.style.cssText = `
+          position: fixed; 
+          top: 50%; 
+          left: 50%; 
+          transform: translate(-50%, -50%); 
+          background: rgba(0, 0, 0, 0.9); 
+          color: white; 
+          padding: 30px 40px; 
+          border-radius: 10px; 
+          font-family: monospace; 
+          font-size: 16px; 
+          z-index: 10000; 
+          min-width: 300px; 
+          text-align: center;
+          transition: opacity 0.8s ease; /* Smooth fade effect */
+        `;
         loadingContent = document.createElement("div");
         loadingContent.id = "file-merger-content";
         loadingDiv.appendChild(loadingContent);
@@ -65,91 +73,81 @@
         ];
         config.files.forEach((file) => {
           const status = mergeStatus[file.name] || "waiting";
-          const progress = mergeProgress[file.name] || { current: 0, total: file.parts };
-          let color = "#888", statusText = status === "merging" ? `merging... ${progress.current}/${progress.total}` : (status === "ready" ? "done" : status);
+          const prog = mergeProgress[file.name] || { current: 0, total: file.parts };
+          let color = "#888";
           if (status === "merging") color = "#ffa500";
           else if (status === "ready") color = "#00ff00";
-          lines.push(`<div style="margin: 8px 0; color: ${color};">${file.name}: ${statusText}</div>`);
+          lines.push(`<div style="margin: 8px 0; color: ${color};">${file.name}: ${status === "merging" ? prog.current+"/"+prog.total : status}</div>`);
         });
         loadingContent.innerHTML = lines.join("");
-        if (config.files.every(f => mergeStatus[f.name] === "ready" || mergeStatus[f.name] === "failed")) {
+
+        // Check if all files are merged
+        const allDone = config.files.every(f => mergeStatus[f.name] === "ready");
+
+        if (allDone) {
+          // Wait 2 seconds before starting the fade
           setTimeout(() => {
             loadingDiv.style.opacity = "0";
-            loadingDiv.style.transition = "opacity 0.5s";
-            setTimeout(() => loadingDiv.remove(), 500);
-          }, 1000);
+            // Remove from DOM after fade completes
+            setTimeout(() => loadingDiv.remove(), 800);
+          }, 2000);
         }
-      }
-
-      function normalizeUrl(url) { try { return decodeURIComponent(url.toString().split("?")[0]); } catch (e) { return url; } }
-      function urlsMatch(url1, url2) { 
-        const n1 = normalizeUrl(url1), n2 = normalizeUrl(url2);
-        return n1 === n2 || n1.endsWith(n2) || n2.endsWith(n1) || n1.split("/").pop() === n2.split("/").pop();
-      }
-
-      async function mergeSplitFiles(filePath, numParts) {
-        const fileName = filePath.split("/").pop();
-        mergeProgress[fileName] = { current: 0, total: numParts };
-        updateLoadingDisplay();
-        try {
-          const buffers = [];
-          for (let i = 1; i <= numParts; i++) {
-            const response = await window.originalFetch(`${filePath}.part${i}`);
-            if (!response.ok) throw new Error(`Part missing: ${fileName}.part${i}`);
-            buffers.push(await response.arrayBuffer());
-            mergeProgress[fileName].current = i;
-            updateLoadingDisplay();
-          }
-          const totalSize = buffers.reduce((sum, buf) => sum + buf.byteLength, 0);
-          const mergedArray = new Uint8Array(totalSize);
-          let offset = 0;
-          for (const buffer of buffers) { mergedArray.set(new Uint8Array(buffer), offset); offset += buffer.byteLength; }
-          return mergedArray.buffer;
-        } catch (err) { mergeStatus[fileName] = "failed"; updateLoadingDisplay(); throw err; }
       }
 
       if (!window.originalFetch) window.originalFetch = window.fetch;
       window.fetch = function (url, ...args) {
-        const urlStr = normalizeUrl(url);
-        const found = config.files.find(f => urlsMatch(urlStr, f.name));
+        const urlStr = url.toString();
+        const found = config.files.find(f => urlStr.includes(f.name));
         if (found && !urlStr.includes(".part")) {
           return new Promise((resolve) => {
             const check = setInterval(() => {
               if (window.mergedFiles[found.name]) {
                 clearInterval(check);
-                resolve(new Response(window.mergedFiles[found.name], { status: 200, headers: { "Content-Type": "application/octet-stream" } }));
+                resolve(new Response(window.mergedFiles[found.name], { headers: { "Content-Type": "application/octet-stream" } }));
               }
             }, 100);
           });
         }
-        return window.originalFetch.call(this, url, ...args);
+        return window.originalFetch.apply(this, [url, ...args]);
       };
 
-      async function autoMergeFiles() {
+      async function startMerge() {
+        initializeUI();
         for (const file of config.files) {
           const fullPath = config.basePath + file.name;
           mergeStatus[file.name] = "merging";
           updateLoadingDisplay();
+          const buffers = [];
           try {
-            const buffer = await mergeSplitFiles(fullPath, file.parts);
-            window.mergedFiles[file.name] = buffer;
+            for (let i = 1; i <= file.parts; i++) {
+              const res = await window.originalFetch(`${fullPath}.part${i}`);
+              if (!res.ok) throw new Error("Part missing");
+              buffers.push(await res.arrayBuffer());
+              mergeProgress[file.name] = { current: i, total: file.parts };
+              updateLoadingDisplay();
+            }
+            const totalSize = buffers.reduce((a, b) => a + b.byteLength, 0);
+            const merged = new Uint8Array(totalSize);
+            let offset = 0;
+            for (const b of buffers) { merged.set(new Uint8Array(b), offset); offset += b.byteLength; }
+            window.mergedFiles[file.name] = merged.buffer;
             mergeStatus[file.name] = "ready";
             updateLoadingDisplay();
-          } catch (e) { console.error(e); }
+          } catch (e) { mergeStatus[file.name] = "failed"; updateLoadingDisplay(); }
         }
       }
-
-      initializeUI();
-      autoMergeFiles();
+      startMerge();
     })();
   </script>
 
   <script>
-    var canvas = document.getElementById("unity-canvas");
-    var container = document.getElementById("gameContainer");
+    var canvas = document.querySelector("#unity-canvas");
+    var container = document.querySelector("#gameContainer");
     var loadingBar = document.getElementById("loadingBar");
+    var pctText = document.getElementById("pct");
 
-    var buildUrl = "Build/";
+    var buildUrl = "Build/"; 
+
     var config = {
       dataUrl:      buildUrl + "TPG_ItalianBrainrotObbyParkour_V01i.data.unityweb",
       frameworkUrl: buildUrl + "TPG_ItalianBrainrotObbyParkour_V01i.framework.js.unityweb",
@@ -160,35 +158,17 @@
       productVersion: "0.1i",
     };
 
-    function onResize() {
-      var w = window.innerWidth, h = window.innerHeight, r = 9/16;
-      if (w * r > h) w = Math.ceil(h / r); else h = Math.floor(w * r);
-      container.style.width = canvas.style.width = w + "px";
-      container.style.height = canvas.style.height = h + "px";
-      container.style.top = Math.floor((window.innerHeight - h) / 2) + "px";
-      container.style.left = Math.floor((window.innerWidth - w) / 2) + "px";
-    }
-    window.addEventListener("resize", onResize);
-    onResize();
-
     var script = document.createElement("script");
     script.src = buildUrl + "TPG_ItalianBrainrotObbyParkour_V01i.loader.js";
-    script.onload = function() {
-      createUnityInstance(canvas, config, function(progress) {
-        document.getElementById("pct").innerText = Math.round(progress * 100) + "%";
-      }).then(function(instance) {
-        window.unityInstance = instance;
-        setTimeout(function() {
-          loadingBar.style.display = "none";
-          container.style.display = "block";
-          window.focus();
-        }, 1500);
-      }).catch(function(msg) { alert(msg); });
+    script.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        pctText.innerText = Math.round(progress * 100) + "%";
+      }).then((instance) => {
+        loadingBar.style.display = "none";
+        container.style.display = "block";
+      }).catch(err => alert(err));
     };
     document.body.appendChild(script);
   </script>
 </body>
 </html>
-
-
-
