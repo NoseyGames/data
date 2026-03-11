@@ -1,119 +1,191 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Italian Brainrot Obby Parkour / Играть на igroutka.ru</title>
-    <style>
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: visible;
-            padding: 0;
-            margin: 0;
-        }
+  <meta charset="utf-8" />
+  <title>Italian Brainrot Obby Parkour</title>
+  <style>
+    html, body { background: #000; width: 100%; height: 100%; overflow: hidden; padding: 0; margin: 0; }
+    #gameContainer { position: absolute; }
+    #gameContainer canvas { position: absolute; }
+  </style>
+</head>
+<body>
 
-        body {
-            background: url('Build.jpg') center no-repeat;
-            background-size: cover;
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-        }
-    </style>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
-<script type="text/javascript" src="//m.igroutka.ru/files/scripts/scr2.js"></script></head>
-<body class="dark">
-<div id="unity-container" class="unity-desktop">
+  <script type="text/javascript" src="sdk-v1.0.js"></script>
+
+  <div id="gameContainer" style="display:none;">
     <canvas id="unity-canvas"></canvas>
-</div>
-<div id="loading-cover" style="display:none;">
-    <div id="unity-loading-bar">
-        <div id="unity-logo"><img src="logo.png"></div>
-        <div id="unity-progress-bar-empty" style="display: none;">
-            <div id="unity-progress-bar-full"></div>
-        </div>
-        <div class="spinner"></div>
-    </div>
-</div>
-<script>
-    const hideFullScreenButton = "";
-    const buildUrl = "Build";
-    const loaderUrl = buildUrl + "/TPG_ItalianBrainrotObbyParkour_V01i.loader.js";
-    const config = {
-        dataUrl: buildUrl + "/TPG_ItalianBrainrotObbyParkour_V01i.data.unityweb",
-        frameworkUrl: buildUrl + "/TPG_ItalianBrainrotObbyParkour_V01i.framework.js.unityweb",
-        codeUrl: buildUrl + "/TPG_ItalianBrainrotObbyParkour_V01i.wasm.unityweb",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "Cursora Labs O.Ü",
-        productName: "Italian Brainrot Obby Parkour",
-        productVersion: "0.1i",
-        webglContextAttributes: {
-            preserveDrawingBuffer: true,
-            powerPreference: "high-performance",
-        },
+  </div>
+
+  <div id="loadingBar" style="color:white; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-family:Arial; text-align:center;">
+    loading... <span id="pct">0%</span>
+  </div>
+
+  <script>
+    function firebaseLogEvent(event_name) { console.log('firebaseLogEvent:', event_name); }
+    function firebaseLogEventParameter(event_name, event_param) { console.log('firebaseLogEventParameter:', event_name, event_param); }
+    function firebaseSetUserProperties(props) { console.log('firebaseSetUserProperties:', props); }
+  </script>
+
+  <script>
+    window.fileMergerConfig = {
+      files: [
+        { name: 'TPG_ItalianBrainrotObbyParkour_V01i.data.unityweb', parts: 2 },
+      ],
+      basePath: '/games/Build/',
+      debug: true
     };
+  </script>
 
-    const container = document.querySelector("#unity-container");
-    const canvas = document.querySelector("#unity-canvas");
-    const loadingCover = document.querySelector("#loading-cover");
-    const progressBarEmpty = document.querySelector("#unity-progress-bar-empty");
-    const progressBarFull = document.querySelector("#unity-progress-bar-full");
-    const spinner = document.querySelector('.spinner');
+  <script>
+    (function () {
+      "use strict";
+      const defaultConfig = { files: [], basePath: "", debug: true };
+      const config = Object.assign({}, defaultConfig, window.fileMergerConfig || {});
+      window.mergedFiles = window.mergedFiles || {};
+      const mergeStatus = {};
+      const mergeProgress = {};
+      let loadingDiv, loadingContent;
 
-    const canFullscreen = (function () {
-        for (const key of [
-            'exitFullscreen',
-            'webkitExitFullscreen',
-            'webkitCancelFullScreen',
-            'mozCancelFullScreen',
-            'msExitFullscreen',
-        ]) {
-            if (key in document) {
-                return true;
-            }
-        }
-        return false;
-    }());
+      function initializeUI() {
+        loadingDiv = document.createElement("div");
+        loadingDiv.id = "file-merger-loading";
+        loadingDiv.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.9); color: white; padding: 30px 40px; border-radius: 10px; font-family: monospace; font-size: 16px; z-index: 10000; min-width: 300px; text-align: center;`;
+        loadingContent = document.createElement("div");
+        loadingContent.id = "file-merger-content";
+        loadingDiv.appendChild(loadingContent);
+        document.body.appendChild(loadingDiv);
+      }
 
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        container.className = "unity-mobile";
-    }
-
-    loadingCover.style.display = "";
-
-    // Explicitly setting the background image using JavaScript
-    document.body.style.backgroundImage = "url('Build.jpg')";
-    document.body.style.backgroundPosition = "center";
-    document.body.style.backgroundRepeat = "no-repeat";
-    document.body.style.backgroundSize = "cover";
-
-    var myGameInstance = null;
-
-    const script = document.createElement("script");
-    script.src = loaderUrl;
-
-    script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-            spinner.style.display = "none";
-            progressBarEmpty.style.display = "";
-            progressBarFull.style.width = `${100 * progress}%`;
-        }).then((unityInstance) => {
-            myGameInstance = unityInstance;
-            loadingCover.style.display = "none";
-            // Now that Unity is fully loaded, it's safe to interact with it
-            //checkDevice(); // Ensure this function is called here
-        }).catch((message) => {
-            alert(message);
+      function updateLoadingDisplay() {
+        if (!loadingContent) return;
+        const lines = [
+          '<div style="font-size: 18px; margin-bottom: 15px;">loading...</div>',
+          '<a href="https://nikehub.org" style="font-size: 15px; color: #d42222; text-decoration: underline; margin-bottom: 10px; display: block;">nikehub</a>'
+        ];
+        config.files.forEach((file) => {
+          const status = mergeStatus[file.name] || "waiting";
+          const progress = mergeProgress[file.name] || { current: 0, total: file.parts };
+          let color = "#888", statusText = status === "merging" ? `merging... ${progress.current}/${progress.total}` : (status === "ready" ? "done" : status);
+          if (status === "merging") color = "#ffa500";
+          else if (status === "ready") color = "#00ff00";
+          lines.push(`<div style="margin: 8px 0; color: ${color};">${file.name}: ${statusText}</div>`);
         });
+        loadingContent.innerHTML = lines.join("");
+        if (config.files.every(f => mergeStatus[f.name] === "ready" || mergeStatus[f.name] === "failed")) {
+          setTimeout(() => {
+            loadingDiv.style.opacity = "0";
+            loadingDiv.style.transition = "opacity 0.5s";
+            setTimeout(() => loadingDiv.remove(), 500);
+          }, 1000);
+        }
+      }
+
+      function normalizeUrl(url) { try { return decodeURIComponent(url.toString().split("?")[0]); } catch (e) { return url; } }
+      function urlsMatch(url1, url2) { 
+        const n1 = normalizeUrl(url1), n2 = normalizeUrl(url2);
+        return n1 === n2 || n1.endsWith(n2) || n2.endsWith(n1) || n1.split("/").pop() === n2.split("/").pop();
+      }
+
+      async function mergeSplitFiles(filePath, numParts) {
+        const fileName = filePath.split("/").pop();
+        mergeProgress[fileName] = { current: 0, total: numParts };
+        updateLoadingDisplay();
+        try {
+          const buffers = [];
+          for (let i = 1; i <= numParts; i++) {
+            const response = await window.originalFetch(`${filePath}.part${i}`);
+            if (!response.ok) throw new Error(`Part missing: ${fileName}.part${i}`);
+            buffers.push(await response.arrayBuffer());
+            mergeProgress[fileName].current = i;
+            updateLoadingDisplay();
+          }
+          const totalSize = buffers.reduce((sum, buf) => sum + buf.byteLength, 0);
+          const mergedArray = new Uint8Array(totalSize);
+          let offset = 0;
+          for (const buffer of buffers) { mergedArray.set(new Uint8Array(buffer), offset); offset += buffer.byteLength; }
+          return mergedArray.buffer;
+        } catch (err) { mergeStatus[fileName] = "failed"; updateLoadingDisplay(); throw err; }
+      }
+
+      if (!window.originalFetch) window.originalFetch = window.fetch;
+      window.fetch = function (url, ...args) {
+        const urlStr = normalizeUrl(url);
+        const found = config.files.find(f => urlsMatch(urlStr, f.name));
+        if (found && !urlStr.includes(".part")) {
+          return new Promise((resolve) => {
+            const check = setInterval(() => {
+              if (window.mergedFiles[found.name]) {
+                clearInterval(check);
+                resolve(new Response(window.mergedFiles[found.name], { status: 200, headers: { "Content-Type": "application/octet-stream" } }));
+              }
+            }, 100);
+          });
+        }
+        return window.originalFetch.call(this, url, ...args);
+      };
+
+      async function autoMergeFiles() {
+        for (const file of config.files) {
+          const fullPath = config.basePath + file.name;
+          mergeStatus[file.name] = "merging";
+          updateLoadingDisplay();
+          try {
+            const buffer = await mergeSplitFiles(fullPath, file.parts);
+            window.mergedFiles[file.name] = buffer;
+            mergeStatus[file.name] = "ready";
+            updateLoadingDisplay();
+          } catch (e) { console.error(e); }
+        }
+      }
+
+      initializeUI();
+      autoMergeFiles();
+    })();
+  </script>
+
+  <script>
+    var canvas = document.getElementById("unity-canvas");
+    var container = document.getElementById("gameContainer");
+    var loadingBar = document.getElementById("loadingBar");
+
+    var buildUrl = "/games/Build/";
+    var config = {
+      dataUrl:      buildUrl + "TPG_ItalianBrainrotObbyParkour_V01i.data.unityweb",
+      frameworkUrl: buildUrl + "TPG_ItalianBrainrotObbyParkour_V01i.framework.js.unityweb",
+      codeUrl:      buildUrl + "TPG_ItalianBrainrotObbyParkour_V01i.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "Cursora Labs O.Ü",
+      productName: "Italian Brainrot Obby Parkour",
+      productVersion: "0.1i",
     };
 
+    function onResize() {
+      var w = window.innerWidth, h = window.innerHeight, r = 9/16;
+      if (w * r > h) w = Math.ceil(h / r); else h = Math.floor(w * r);
+      container.style.width = canvas.style.width = w + "px";
+      container.style.height = canvas.style.height = h + "px";
+      container.style.top = Math.floor((window.innerHeight - h) / 2) + "px";
+      container.style.left = Math.floor((window.innerWidth - w) / 2) + "px";
+    }
+    window.addEventListener("resize", onResize);
+    onResize();
+
+    var script = document.createElement("script");
+    script.src = buildUrl + "TPG_ItalianBrainrotObbyParkour_V01i.loader.js";
+    script.onload = function() {
+      createUnityInstance(canvas, config, function(progress) {
+        document.getElementById("pct").innerText = Math.round(progress * 100) + "%";
+      }).then(function(instance) {
+        window.unityInstance = instance;
+        setTimeout(function() {
+          loadingBar.style.display = "none";
+          container.style.display = "block";
+          window.focus();
+        }, 1500);
+      }).catch(function(msg) { alert(msg); });
+    };
     document.body.appendChild(script);
-</script>
-<script async src="https://g.com/pagead/js/adsbygoogle.js"
-        data-ad-client="ca-pub-8349441957149316" data-ad-frequency-hint="90s" crossorigin="anonymous"
-        data-ad-channel="7806859280"
-></script>
-<script type="text/javascript" src="sdk-v1.0.js"></script>
+  </script>
 </body>
 </html>
