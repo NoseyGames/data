@@ -1,4 +1,4 @@
-[
+ const files = [
   'cl1',
 'cl10bullets',
 'cl10minutestildawn',
@@ -1934,4 +1934,4 @@
 'superdromebugs',
 'vvvvvv',
 'wilywars'
-]
+];
